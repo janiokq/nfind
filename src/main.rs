@@ -1,97 +1,230 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use std::net::{ToSocketAddrs, TcpStream, Shutdown, UdpSocket};
 use std::{thread, io};
 
 mod pool;
 
-use tokio::macros;
+use tokio::{macros, runtime};
 use tokio;
 use rand::random;
 use ipnet::Ipv4Net;
 use std::str::FromStr;
+use surge_ping::Pinger;
+use std::io::{Error, Write};
+use std::future::Future;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use tokio::sync::Mutex;
+use std::fs::File;
+
+lazy_static! {
+  static ref  RESULTS:Mutex<HashMap<String,String>> = Mutex::new(HashMap::new());
+    static ref PORTS:std::sync::Mutex<Vec<u16>> = std::sync::Mutex::new(vec![]);
+}
+
+use clap::{Arg, App};
+use std::sync::Arc;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> io::Result<()> {
 
-    // let socket = UdpSocket::bind("127.0.0.1:8000")?;
-    // match socket.connect("127.0.0.1:22"){
-    //     Ok(x)=>{
-    //         println!("正常连接{:?}",x);
-    //     },
-    //     Err(e)=>{
-    //         println!("连接错误");
-    //     }
-    // };
-    // let mut input = String::from("2121");
-    // match socket.send(input.as_bytes()){
-    //     Ok(x)=>{
-    //         println!("正常1{:?}",x);
-    //     },
-    //     Err(e)=>{
-    //         println!("发送失败端口没有打开1");
-    //     }
-    // };
-    // let mut buffer = [0u8; 1500];
-    // match socket.recv_from(&mut buffer){
-    //         Ok(x)=>{
-    //             println!("端口打开{:?}",x);
-    //         },
-    //         Err(e)=>{
-    //             println!("接收错误");
-    //         }
-    // }
-    // Ok(())
-    //ip 存活扫描
-    //udp 扫描
-    // let socket = UdpSocket::bind("127.0.0.1:34254").unwrap();
-    // socket.connect("127.0.0.1:8080").unwrap();
-    // socket.send(&[0, 1, 2]).expect("couldn't send message");
-    // match  socket.take_error() {
-    //     Ok(x)=>{
-    //         println!("正常{:?}",x);
-    //     },
-    //     _=>{
-    //         println!("错误");
-    //     }
-    // }
-    // let mut buf = [0; 10];
-    //   match socket.peek(&mut buf) {
-    //       Ok(received) => println!("received {} bytes", received),
-    //       Err(e) => println!("peek function failed: {:?}", e),
-    //   }
-    // tcp 扫描
+    let matches = App::new("TCP port scanner Program")
+        .version("0.1.0")
+        .author("janiokq <janiokq@gmail.com>")
+        .about("This is TCP port scanner written using RUST")
+        .arg(Arg::with_name("outfile")
+            .short("outf")
+            .long("outfile")
+            .takes_value(true)
+            .help("Result Output file path"))
+        .arg(Arg::with_name("ips")
+            .short("ip")
+            .long("ipRange")
+            .takes_value(true)
+            .help("This is the IP range parameter\n\
+            ip,ip   Multiple IP description\n\
+            or
+            ip-ip   Description of a range of IP
+            "))
+        .arg(Arg::with_name("port")
+            .short("p")
+            .long("port")
+            .takes_value(true)
+            .help("This is the Port range parameter\n\
+            port,port   Multiple Port description\n\
+            or\n\
+            port-port   Description of a range of Port
+            "))
+        .get_matches();
 
+    let ips = matches.value_of("ips");
+    let ports = matches.value_of("port");
+    let mut ip_range: Vec<String> = Vec::new();
+    let mut port_range: Vec<u16> = Vec::new();
+    match ips {
+        None => {
+            println!("Please enter an IP address range");
+            panic!()
+        }
+        Some(s) => {
+            let model = false;
+            match s.find(",") {
+                None => {
+                    match s.find("-") {
+                        None => {
+                            println!("Enter a correct IP parameter format");
+                            panic!()
+                        }
+                        Some(index) => {
+                            let mut start = "";
+                            let mut end = "";
+                            for x in s.split("-") {
+                                if start.eq("") {
+                                    start = x;
+                                } else {
+                                    end = x;
+                                }
+                            }
+                            ip_range = gen_range_ip(start, end)
+                        }
+                    }
+                }
+                Some(index) => {
+                    for x in s.split(",") {
+                        if !x.eq(",") {
+                            ip_range.push(x.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    match ports {
+        None => {
+            println!("Please enter an port address range");
+            panic!()
+        }
+        Some(s) => {
+            let model = false;
+            match s.find(",") {
+                None => {
+                    match s.find("-") {
+                        None => {
+                            println!("Enter a correct port parameter format");
+                            panic!()
+                        }
+                        Some(index) => {
+                            let mut start: u16 = 0;
+                            let mut end: u16 = 0;
+                            for x in s.split("-") {
+                                if start == 0 {
+                                    start = x.parse::<u16>().unwrap();
+                                } else {
+                                    end = x.parse::<u16>().unwrap();
+                                }
+                            }
+                            for index in start..end {
+                                PORTS.lock().unwrap().push(index);
+                            }
+                        }
+                    }
+                }
+                Some(index) => {
+                    for x in s.split(",") {
+                        if !x.eq(",") {
+                            PORTS.lock().unwrap().push(x.parse::<u16>().unwrap());
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    // let th_pool: pool::ThreadPool = pool::ThreadPool::new(1000);
-    // let timeout = Duration::from_millis(2000);
-    //
-    // ///扫描所有
-    // /// 0-1023为系统保留端口
-    // /// 1023 为
-    // for i in 0..65535{
-    //     let ic = i.clone();
-    //     th_pool.execute( move ||{
-    //         let value  = tcp_is_open("220.181.38.148".parse().unwrap(), ic, timeout);
-    //         println!("端口{}扫描结果 {} ",ic,value);
-    //     });
-    // }
-    // Ok(())
+    let now = Instant::now();
+    let timeout_ping = Duration::from_millis(200);
 
+    // let start_port: u16 = 8000;
+    // let ends_port: u16 = 8571;
 
+    let mut handles = Vec::new();
+    for x in ip_range {
+        let addr = x.parse().unwrap();
+        let mut pinger = Pinger::new(addr).unwrap();
+        pinger.timeout(timeout_ping);
+        handles.push(tokio::spawn(async move {
+            ping_ip(addr.to_string(), pinger,).await
+        }));
+    }
+    std::thread::sleep(Duration::from_millis(120));
 
-    let d =  gen_range_ip("192.168.1.1","192.168.1.255");
-    let addr = "220.181.38.148".parse().unwrap();
-    let timeout = Duration::from_secs(1);
-    match ping::ping(addr, Some(timeout), Some(166), Some(3), Some(5), Some(&random())) {
-        Ok(d) => {
-            println!("成功")
+    for handle in handles {
+        handle.await?;
+    }
+
+    println!("total time consuming ：{} ms", now.elapsed().as_millis());
+    println!("scan end ....");
+    let mut global_results = RESULTS.lock().await;
+    let outfile = matches.value_of("outfile").unwrap_or("./scan_results.txt");
+
+    let mut file = File::create(outfile).unwrap();
+    for item in global_results.iter() {
+        file.write(item.0.as_ref()).unwrap();
+        file.write(b":").unwrap();
+        file.write(item.1.as_ref()).unwrap();
+        file.write(b"\n").unwrap();
+    }
+    Ok(())
+}
+
+async fn ping_ip(addr: String, pinger: Pinger) -> io::Result<()> {
+    match pinger.ping(0).await {
+        Ok(reply) => {
+            println!("start {}", addr);
+            tokio::spawn(async move {
+                port_scanning(addr.to_string()).await;
+            });
+            Ok(())
         }
         Err(e) => {
-            println!("错误")
+            // println!("Unable to access IP {}", addr);
+            Ok(())
         }
-    };
+    }
+}
 
-    println!("端口22222")
+async fn port_scanning(addr: String) -> io::Result<()> {
+    let timeout = Duration::from_millis(200);
+    let open_port = Arc::new(Mutex::new(Vec::new()));
+    let mut handles = Vec::new();
+
+    for i in PORTS.lock().unwrap().iter() {
+        let ic = i.clone();
+        let ad = addr.clone();
+        let my_port = Arc::clone(&open_port);
+        handles.push(tokio::spawn(async move {
+            let value = tcp_is_open(ad.parse().unwrap(), ic, timeout);
+            if value {
+                let mut lock = my_port.lock().await;
+                lock.push(ic);
+            }
+        }));
+    }
+
+    for handle in handles {
+        handle.await?;
+    }
+
+    let mut results = open_port.lock().await;
+    if results.len() > 0 {
+        let mut global_results = RESULTS.lock().await;
+        let mut ports = "".to_string();
+        for i in results.to_vec() {
+            ports += &*(i.to_string() + ",");
+        }
+        global_results.insert(addr, ports);
+    }
+
+    Ok(())
 }
 
 fn tcp_is_open(hostname: String, port: u16, timeout: Duration) -> bool {
@@ -107,12 +240,12 @@ fn tcp_is_open(hostname: String, port: u16, timeout: Duration) -> bool {
 
 
 ///只支持生成 ipv4
-fn gen_range_ip(start: &str ,end:&str) -> Vec<String> {
+fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
     let mut results: Vec<String> = Vec::new();
     results.push(start.clone().to_string());
     let startsSplit = start.split(".");
-    let mut starts:Vec<u32> = Vec::new();
-    for  d in startsSplit {
+    let mut starts: Vec<u32> = Vec::new();
+    for d in startsSplit {
         let mut n: u32 = FromStr::from_str(d).unwrap();
         starts.push(n);
     }
@@ -121,8 +254,8 @@ fn gen_range_ip(start: &str ,end:&str) -> Vec<String> {
         let mut i = 4;
         let mut addvalue = false;
         while i > 0 {
-            if  starts[i-1] < 255 {
-                starts[i-1]+=1;
+            if starts[i - 1] < 255 {
+                starts[i - 1] += 1;
                 addvalue = true;
                 break;
             }
@@ -134,9 +267,9 @@ fn gen_range_ip(start: &str ,end:&str) -> Vec<String> {
         }
         let mut ip = "".to_string();
         for x in &starts {
-            ip+= &*(x.to_string() + ".");
+            ip += &*(x.to_string() + ".");
         }
-        ip.remove(ip.len()-1);
+        ip.remove(ip.len() - 1);
         results.push(ip.clone());
         if ip.eq(end) {
             break;

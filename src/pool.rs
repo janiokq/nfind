@@ -1,5 +1,7 @@
 use std::thread;
 use std::sync::{Arc,mpsc,Mutex};
+use std::future::Future;
+
 pub struct ThreadPool{
     workers:Vec<Worker>,
     sender:mpsc::Sender<Message>,
@@ -20,7 +22,9 @@ impl ThreadPool {
     }
     pub fn execute<F>(&self,f:F)
     where
-        F:FnOnce() + Send + 'static
+        F:FnOnce() + Send + 'static,
+        F:Future + Send + 'static,
+
     {
         let job = Box::new(f);
         self.sender.send(Message::NewJob(job)).unwrap();
