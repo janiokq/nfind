@@ -72,8 +72,7 @@ async fn main() -> io::Result<()> {
                 None => {
                     match s.find("-") {
                         None => {
-                            println!("Enter a correct IP parameter format");
-                            panic!()
+                            ip_range.push(s.to_string());
                         }
                         Some(index) => {
                             let mut start = "";
@@ -105,13 +104,11 @@ async fn main() -> io::Result<()> {
             panic!()
         }
         Some(s) => {
-            let model = false;
             match s.find(",") {
                 None => {
                     match s.find("-") {
                         None => {
-                            println!("Enter a correct port parameter format");
-                            panic!()
+                            PORTS.lock().unwrap().push(s.parse::<u16>().unwrap());
                         }
                         Some(index) => {
                             let mut start: u16 = 0;
@@ -243,9 +240,9 @@ fn tcp_is_open(hostname: String, port: u16, timeout: Duration) -> bool {
 fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
     let mut results: Vec<String> = Vec::new();
     results.push(start.clone().to_string());
-    let startsSplit = start.split(".");
+    let starts_split = start.split(".");
     let mut starts: Vec<u32> = Vec::new();
-    for d in startsSplit {
+    for d in starts_split {
         let mut n: u32 = FromStr::from_str(d).unwrap();
         starts.push(n);
     }
