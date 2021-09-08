@@ -24,9 +24,15 @@ lazy_static! {
 
 use clap::{Arg, App};
 use std::sync::Arc;
+use tokio::runtime::{Builder, Runtime};
+use tokio::time::sleep;
+use local_ip_address::local_ip;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
+
+
+
 
     let matches = App::new("TCP port scanner Program")
         .version("0.1.0")
@@ -60,11 +66,33 @@ async fn main() -> io::Result<()> {
     let ips = matches.value_of("ips");
     let ports = matches.value_of("port");
     let mut ip_range: Vec<String> = Vec::new();
-    let mut port_range: Vec<u16> = Vec::new();
     match ips {
         None => {
-            println!("Please enter an IP address range");
-            panic!()
+
+            let my_local_ip = local_ip().unwrap();
+            let mut start_ip:Vec<String> = Vec::new();
+            for x in my_local_ip.to_string().split(".") {
+                start_ip.push(x.to_string());
+            }
+           let slen = start_ip.len();
+            start_ip[slen-1] = "1".to_string();
+            let mut end_ip:Vec<String> = start_ip.clone();
+            let elen = end_ip.len();
+            end_ip[elen-1] = "255".to_string();
+
+            let mut sip = "".to_string();
+            for x in start_ip {
+                sip += &*(x + ".");
+            }
+            sip.remove(sip.len() - 1);
+
+            let mut eip = "".to_string();
+            for x in end_ip {
+                eip += &*(x + ".");
+            }
+            eip.remove(eip.len() - 1);
+            ip_range = gen_range_ip(&sip, &eip)
+
         }
         Some(s) => {
             let model = false;
@@ -100,8 +128,13 @@ async fn main() -> io::Result<()> {
     }
     match ports {
         None => {
-            println!("Please enter an port address range");
-            panic!()
+            ///Default full port
+            let mut start: u16 = 0;
+            let mut end: u16 = 65535;
+            while start < end {
+                start+=1;
+                PORTS.lock().unwrap().push(start);
+            }
         }
         Some(s) => {
             match s.find(",") {
@@ -120,9 +153,12 @@ async fn main() -> io::Result<()> {
                                     end = x.parse::<u16>().unwrap();
                                 }
                             }
-                            for index in start..end {
-                                PORTS.lock().unwrap().push(index);
+
+                            while start < end {
+                                PORTS.lock().unwrap().push(start);
+                                start+=1;
                             }
+
                         }
                     }
                 }
@@ -139,28 +175,32 @@ async fn main() -> io::Result<()> {
 
     let now = Instant::now();
     let timeout_ping = Duration::from_millis(200);
-
-    // let start_port: u16 = 8000;
-    // let ends_port: u16 = 8571;
-
     let mut handles = Vec::new();
+    println!("total IP addresses {}",ip_range.len());
+
+    let data1 = Arc::new(Mutex::new(0));
     for x in ip_range {
         let addr = x.parse().unwrap();
         let mut pinger = Pinger::new(addr).unwrap();
         pinger.timeout(timeout_ping);
+        let data2 = Arc::clone(&data1);
         handles.push(tokio::spawn(async move {
-            ping_ip(addr.to_string(), pinger,).await
+            sleep(Duration::from_millis(1000)).await;
+            ping_ip(addr.to_string(), pinger,).await;
+            let mut lock = data2.lock().await;
+            *lock += 1;
         }));
     }
-    std::thread::sleep(Duration::from_millis(120));
 
     for handle in handles {
         handle.await?;
     }
 
+    let mut lock = data1.lock().await;
     println!("total time consuming ：{} ms", now.elapsed().as_millis());
     println!("scan end ....");
     let mut global_results = RESULTS.lock().await;
+    println!("{:?}",global_results);
     let outfile = matches.value_of("outfile").unwrap_or("./scan_results.txt");
 
     let mut file = File::create(outfile).unwrap();
@@ -176,10 +216,7 @@ async fn main() -> io::Result<()> {
 async fn ping_ip(addr: String, pinger: Pinger) -> io::Result<()> {
     match pinger.ping(0).await {
         Ok(reply) => {
-            println!("start {}", addr);
-            tokio::spawn(async move {
-                port_scanning(addr.to_string()).await;
-            });
+            port_scanning(addr.to_string()).await;
             Ok(())
         }
         Err(e) => {
@@ -193,24 +230,29 @@ async fn port_scanning(addr: String) -> io::Result<()> {
     let timeout = Duration::from_millis(200);
     let open_port = Arc::new(Mutex::new(Vec::new()));
     let mut handles = Vec::new();
+    let now = Instant::now();
+    let data1 = Arc::new(Mutex::new(0));
+    let addr2 = addr.clone();
 
     for i in PORTS.lock().unwrap().iter() {
         let ic = i.clone();
         let ad = addr.clone();
         let my_port = Arc::clone(&open_port);
+        let data2 = Arc::clone(&data1);
         handles.push(tokio::spawn(async move {
             let value = tcp_is_open(ad.parse().unwrap(), ic, timeout);
             if value {
                 let mut lock = my_port.lock().await;
                 lock.push(ic);
             }
+            let mut lock = data2.lock().await;
+            *lock += 1;
+
         }));
     }
-
     for handle in handles {
         handle.await?;
     }
-
     let mut results = open_port.lock().await;
     if results.len() > 0 {
         let mut global_results = RESULTS.lock().await;
@@ -220,6 +262,10 @@ async fn port_scanning(addr: String) -> io::Result<()> {
         }
         global_results.insert(addr, ports);
     }
+    let mut lock = data1.lock().await;
+    println!("{} completes task {}：consuming {} ms",lock,addr2, now.elapsed().as_millis());
+
+
 
     Ok(())
 }
@@ -251,8 +297,15 @@ fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
         let mut i = 4;
         let mut addvalue = false;
         while i > 0 {
-            if starts[i - 1] < 255 {
+            if starts[i - 1] < 256 {
                 starts[i - 1] += 1;
+                if starts[i - 1] == 256 {
+                    let mut cleari = i-2;
+                    if cleari > 0 {
+                        starts[cleari] += 1;
+                        starts[i - 1] = 1;
+                    }
+                }
                 addvalue = true;
                 break;
             }

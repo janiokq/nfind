@@ -12,11 +12,10 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24aa681d-1262-4b43-8a7e-a56bef14ce18" name="Default Changelist" comment="Generate IP range">
+    <list default="true" id="24aa681d-1262-4b43-8a7e-a56bef14ce18" name="Default Changelist" comment="Installation instructions">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pool.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/pool.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -111,7 +110,13 @@
       <workItem from="1607996591635" duration="7000" />
       <workItem from="1609817443173" duration="6296000" />
       <workItem from="1630657202097" duration="24712000" />
-      <workItem from="1630980849291" duration="14433000" />
+      <workItem from="1630980849291" duration="17781000" />
+      <workItem from="1631006036591" duration="107000" />
+      <workItem from="1631006193658" duration="82000" />
+      <workItem from="1631006692070" duration="3996000" />
+      <workItem from="1631015632730" duration="121000" />
+      <workItem from="1631016707357" duration="3728000" />
+      <workItem from="1631065541204" duration="1203000" />
     </task>
     <task id="LOCAL-00001" summary="Initialize">
       <created>1607669551596</created>
@@ -127,11 +132,56 @@
       <option name="project" value="LOCAL" />
       <updated>1630894120440</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="tcp First version of scanner">
+      <created>1631000168871</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1631000168871</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Support single IP prot">
+      <created>1631000852213</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1631000852213</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Installation instructions">
+      <created>1631005953045</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1631005953045</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Installation instructions">
+      <created>1631006103275</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1631006103275</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Installation instructions">
+      <created>1631006270326</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1631006270327</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ID_ORDER">
+      <list>
+        <option value="Default.Root" />
+        <option value="Default.Author" />
+        <option value="Default.Date" />
+        <option value="Default.Subject" />
+      </list>
+    </option>
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -148,6 +198,9 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initialize" />
     <MESSAGE value="Generate IP range" />
-    <option name="LAST_COMMIT_MESSAGE" value="Generate IP range" />
+    <MESSAGE value="tcp First version of scanner" />
+    <MESSAGE value="Support single IP prot" />
+    <MESSAGE value="Installation instructions" />
+    <option name="LAST_COMMIT_MESSAGE" value="Installation instructions" />
   </component>
 </project>
