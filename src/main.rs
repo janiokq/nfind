@@ -35,7 +35,7 @@ async fn main() -> io::Result<()> {
 
 
     let matches = App::new("TCP port scanner Program")
-        .version("0.1.0")
+        .version("0.1.1")
         .author("janiokq <janiokq@gmail.com>")
         .about("This is TCP port scanner written using RUST")
         .arg(Arg::with_name("outfile")

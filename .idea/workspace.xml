@@ -12,11 +12,7 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24aa681d-1262-4b43-8a7e-a56bef14ce18" name="Default Changelist" comment="Installation instructions">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
-    </list>
+    <list default="true" id="24aa681d-1262-4b43-8a7e-a56bef14ce18" name="Default Changelist" comment="All IP ports on the LAN are scanned by default" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -116,7 +112,7 @@
       <workItem from="1631006692070" duration="3996000" />
       <workItem from="1631015632730" duration="121000" />
       <workItem from="1631016707357" duration="3728000" />
-      <workItem from="1631065541204" duration="1203000" />
+      <workItem from="1631065541204" duration="1509000" />
     </task>
     <task id="LOCAL-00001" summary="Initialize">
       <created>1607669551596</created>
@@ -167,7 +163,14 @@
       <option name="project" value="LOCAL" />
       <updated>1631006270327</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="All IP ports on the LAN are scanned by default">
+      <created>1631067139926</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1631067139926</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -201,6 +204,7 @@
     <MESSAGE value="tcp First version of scanner" />
     <MESSAGE value="Support single IP prot" />
     <MESSAGE value="Installation instructions" />
-    <option name="LAST_COMMIT_MESSAGE" value="Installation instructions" />
+    <MESSAGE value="All IP ports on the LAN are scanned by default" />
+    <option name="LAST_COMMIT_MESSAGE" value="All IP ports on the LAN are scanned by default" />
   </component>
 </project>
