@@ -12,7 +12,11 @@
     <cargoProject FILE="$PROJECT_DIR$/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="24aa681d-1262-4b43-8a7e-a56bef14ce18" name="Default Changelist" comment="All IP ports on the LAN are scanned by default" />
+    <list default="true" id="24aa681d-1262-4b43-8a7e-a56bef14ce18" name="Default Changelist" comment="up version">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.rs" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -66,6 +70,11 @@
     </key>
   </component>
   <component name="RunManager">
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Run nfind" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="run --package nfind --bin nfind " />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -80,11 +89,6 @@
       <option name="redirectInputPath" value="" />
       <method v="2">
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="GradleAppRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="com.jetbrains.cidr.cpp.gradle.execution.GradleNativeBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
   </component>
@@ -112,7 +116,10 @@
       <workItem from="1631006692070" duration="3996000" />
       <workItem from="1631015632730" duration="121000" />
       <workItem from="1631016707357" duration="3728000" />
-      <workItem from="1631065541204" duration="1509000" />
+      <workItem from="1631065541204" duration="2008000" />
+      <workItem from="1631070902300" duration="4964000" />
+      <workItem from="1631087812401" duration="1027000" />
+      <workItem from="1631089267386" duration="3166000" />
     </task>
     <task id="LOCAL-00001" summary="Initialize">
       <created>1607669551596</created>
@@ -170,7 +177,14 @@
       <option name="project" value="LOCAL" />
       <updated>1631067139926</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="up version">
+      <created>1631067277737</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1631067277737</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -205,6 +219,7 @@
     <MESSAGE value="Support single IP prot" />
     <MESSAGE value="Installation instructions" />
     <MESSAGE value="All IP ports on the LAN are scanned by default" />
-    <option name="LAST_COMMIT_MESSAGE" value="All IP ports on the LAN are scanned by default" />
+    <MESSAGE value="up version" />
+    <option name="LAST_COMMIT_MESSAGE" value="up version" />
   </component>
 </project>

@@ -27,13 +27,13 @@ use std::sync::Arc;
 use tokio::runtime::{Builder, Runtime};
 use tokio::time::sleep;
 use local_ip_address::local_ip;
+use async_recursion::async_recursion;
+use rlimit::{getrlimit, Resource};
+
+
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
-
-
-
-
     let matches = App::new("TCP port scanner Program")
         .version("0.1.1")
         .author("janiokq <janiokq@gmail.com>")
@@ -63,22 +63,30 @@ async fn main() -> io::Result<()> {
             "))
         .get_matches();
 
+    match Resource::NOFILE.get() {
+        Ok(d)=>{
+            Resource::FSIZE.set(d.1, d.1).unwrap();
+        },
+        Err(e)=>{
+        }
+    }
+    ///尝试
+
     let ips = matches.value_of("ips");
     let ports = matches.value_of("port");
     let mut ip_range: Vec<String> = Vec::new();
     match ips {
         None => {
-
             let my_local_ip = local_ip().unwrap();
-            let mut start_ip:Vec<String> = Vec::new();
+            let mut start_ip: Vec<String> = Vec::new();
             for x in my_local_ip.to_string().split(".") {
                 start_ip.push(x.to_string());
             }
-           let slen = start_ip.len();
-            start_ip[slen-1] = "1".to_string();
-            let mut end_ip:Vec<String> = start_ip.clone();
+            let slen = start_ip.len();
+            start_ip[slen - 1] = "1".to_string();
+            let mut end_ip: Vec<String> = start_ip.clone();
             let elen = end_ip.len();
-            end_ip[elen-1] = "255".to_string();
+            end_ip[elen - 1] = "255".to_string();
 
             let mut sip = "".to_string();
             for x in start_ip {
@@ -92,7 +100,6 @@ async fn main() -> io::Result<()> {
             }
             eip.remove(eip.len() - 1);
             ip_range = gen_range_ip(&sip, &eip)
-
         }
         Some(s) => {
             let model = false;
@@ -132,7 +139,7 @@ async fn main() -> io::Result<()> {
             let mut start: u16 = 0;
             let mut end: u16 = 65535;
             while start < end {
-                start+=1;
+                start += 1;
                 PORTS.lock().unwrap().push(start);
             }
         }
@@ -156,9 +163,8 @@ async fn main() -> io::Result<()> {
 
                             while start < end {
                                 PORTS.lock().unwrap().push(start);
-                                start+=1;
+                                start += 1;
                             }
-
                         }
                     }
                 }
@@ -174,35 +180,15 @@ async fn main() -> io::Result<()> {
     }
 
     let now = Instant::now();
-    let timeout_ping = Duration::from_millis(200);
-    let mut handles = Vec::new();
-    println!("total IP addresses {}",ip_range.len());
 
-    let data1 = Arc::new(Mutex::new(0));
-    for x in ip_range {
-        let addr = x.parse().unwrap();
-        let mut pinger = Pinger::new(addr).unwrap();
-        pinger.timeout(timeout_ping);
-        let data2 = Arc::clone(&data1);
-        handles.push(tokio::spawn(async move {
-            sleep(Duration::from_millis(1000)).await;
-            ping_ip(addr.to_string(), pinger,).await;
-            let mut lock = data2.lock().await;
-            *lock += 1;
-        }));
-    }
+    println!("total IP addresses {}", ip_range.len());
+    scan(0,ip_range).await;
 
-    for handle in handles {
-        handle.await?;
-    }
-
-    let mut lock = data1.lock().await;
     println!("total time consuming ：{} ms", now.elapsed().as_millis());
     println!("scan end ....");
     let mut global_results = RESULTS.lock().await;
-    println!("{:?}",global_results);
+    println!("{:?}", global_results);
     let outfile = matches.value_of("outfile").unwrap_or("./scan_results.txt");
-
     let mut file = File::create(outfile).unwrap();
     for item in global_results.iter() {
         file.write(item.0.as_ref()).unwrap();
@@ -210,6 +196,42 @@ async fn main() -> io::Result<()> {
         file.write(item.1.as_ref()).unwrap();
         file.write(b"\n").unwrap();
     }
+    Ok(())
+}
+
+#[async_recursion]
+async fn scan(start_p:usize,ip_range: Vec<String>) -> io::Result<()> {
+    let timeout_ping = Duration::from_millis(200);
+    let mut handles = Vec::new();
+    let mut start_position: usize = start_p;
+    let mut end_p = ip_range.len();
+    let mut has_error = false;
+
+    while start_position < end_p  {
+        let addr = ip_range[start_position].parse().unwrap();
+        match  Pinger::new(addr) {
+            Ok(p)=>{
+               let mut pinger = p;
+                pinger.timeout(timeout_ping);
+                handles.push(tokio::spawn(async move {
+                    ping_ip(addr.to_string(), pinger).await;
+                }));
+            },
+            Err(e)=>{
+                has_error = true;
+                break;
+            }
+        };
+        start_position+=1;
+    };
+
+    for handle in handles {
+        handle.await?;
+    }
+    if has_error {
+        scan(start_position.clone(),ip_range.clone()).await;
+    }
+
     Ok(())
 }
 
@@ -247,7 +269,6 @@ async fn port_scanning(addr: String) -> io::Result<()> {
             }
             let mut lock = data2.lock().await;
             *lock += 1;
-
         }));
     }
     for handle in handles {
@@ -263,8 +284,7 @@ async fn port_scanning(addr: String) -> io::Result<()> {
         global_results.insert(addr, ports);
     }
     let mut lock = data1.lock().await;
-    println!("{} completes task {}：consuming {} ms",lock,addr2, now.elapsed().as_millis());
-
+    println!("{} completes task {}：consuming {} ms", lock, addr2, now.elapsed().as_millis());
 
 
     Ok(())
@@ -300,7 +320,7 @@ fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
             if starts[i - 1] < 256 {
                 starts[i - 1] += 1;
                 if starts[i - 1] == 256 {
-                    let mut cleari = i-2;
+                    let mut cleari = i - 2;
                     if cleari > 0 {
                         starts[cleari] += 1;
                         starts[i - 1] = 1;
