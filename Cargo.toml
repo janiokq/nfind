@@ -1,6 +1,6 @@
 [package]
 name = "nfind"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["WG-zhangfeng <janiokq>"]
 edition = "2018"
 

@@ -35,7 +35,7 @@ use rlimit::{getrlimit, Resource};
 /////### #[tokio::main(flavor = "multi_thread", worker_threads = 1000)]
 fn main()  {
     let matches = App::new("TCP port scanner Program")
-        .version("0.1.1")
+        .version("0.1.2")
         .author("janiokq <janiokq@gmail.com>")
         .about("This is TCP port scanner written using RUST")
         .arg(Arg::with_name("outfile")
