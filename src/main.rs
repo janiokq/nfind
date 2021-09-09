@@ -32,8 +32,8 @@ use rlimit::{getrlimit, Resource};
 
 
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+/////### #[tokio::main(flavor = "multi_thread", worker_threads = 1000)]
+fn main()  {
     let matches = App::new("TCP port scanner Program")
         .version("0.1.1")
         .author("janiokq <janiokq@gmail.com>")
@@ -61,6 +61,11 @@ async fn main() -> io::Result<()> {
             or\n\
             port-port   Description of a range of Port
             "))
+        .arg(Arg::with_name("thread")
+            .short("t")
+            .long("threads")
+            .takes_value(true)
+            .help("Use the number of worker threads。  The default value is the current number of physical cores x 2 "))
         .get_matches();
 
     match Resource::NOFILE.get() {
@@ -71,7 +76,6 @@ async fn main() -> io::Result<()> {
         }
     }
     ///尝试
-
     let ips = matches.value_of("ips");
     let ports = matches.value_of("port");
     let mut ip_range: Vec<String> = Vec::new();
@@ -178,25 +182,54 @@ async fn main() -> io::Result<()> {
             }
         }
     }
-
     let now = Instant::now();
+    let mut threads  = num_cpus::get();
+    match  matches.value_of("thread") {
+        Some(t)=>{
+            match t.parse::<usize>() {
+                Ok(thr)=>{
+                    if thr != 0 {
+                        threads = thr;
+                    }
+                },
+                Err(e)=>{
+                }
+            }
+        },
+        None=>{}
+    } ;
 
-    println!("total IP addresses {}", ip_range.len());
-    scan(0,ip_range).await;
 
-    println!("total time consuming ：{} ms", now.elapsed().as_millis());
-    println!("scan end ....");
-    let mut global_results = RESULTS.lock().await;
-    println!("{:?}", global_results);
-    let outfile = matches.value_of("outfile").unwrap_or("./scan_results.txt");
-    let mut file = File::create(outfile).unwrap();
-    for item in global_results.iter() {
-        file.write(item.0.as_ref()).unwrap();
-        file.write(b":").unwrap();
-        file.write(item.1.as_ref()).unwrap();
-        file.write(b"\n").unwrap();
-    }
-    Ok(())
+
+
+
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(threads)
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+
+            println!("total IP addresses {}", ip_range.len());
+            scan(0,ip_range).await;
+
+            println!("total time consuming ：{} ms", now.elapsed().as_millis());
+            println!("scan end ....");
+            let mut global_results = RESULTS.lock().await;
+            println!("{:?}", global_results);
+            let outfile = matches.value_of("outfile").unwrap_or("./scan_results.txt");
+            let mut file = File::create(outfile).unwrap();
+            for item in global_results.iter() {
+                file.write(item.0.as_ref()).unwrap();
+                file.write(b":").unwrap();
+                file.write(item.1.as_ref()).unwrap();
+                file.write(b"\n").unwrap();
+            }
+
+        });
+
+
+
 }
 
 #[async_recursion]
