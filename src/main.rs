@@ -1,17 +1,11 @@
 use std::time::{Duration, Instant};
-use std::net::{ToSocketAddrs, TcpStream, Shutdown, UdpSocket};
-use std::{thread, io};
-
-mod pool;
-
-use tokio::{macros, runtime};
+use std::net::{ToSocketAddrs, TcpStream, Shutdown};
+use std::io;
+// mod pool;
 use tokio;
-use rand::random;
-use ipnet::Ipv4Net;
 use std::str::FromStr;
-use surge_ping::Pinger;
-use std::io::{Error, Write};
-use std::future::Future;
+use std::io::Write;
+use surge_ping::IcmpPacket;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use tokio::sync::Mutex;
@@ -24,27 +18,26 @@ lazy_static! {
 
 use clap::{Arg, App};
 use std::sync::Arc;
-use tokio::runtime::{Builder, Runtime};
-use tokio::time::sleep;
 use local_ip_address::local_ip;
 use async_recursion::async_recursion;
-use rlimit::{getrlimit, Resource};
+use rlimit::Resource;
 
 
 
-/////### #[tokio::main(flavor = "multi_thread", worker_threads = 1000)]
+// #[tokio::main(flavor = "multi_thread", worker_threads = 1000)]
+// #[tokio::main]
 fn main()  {
     let matches = App::new("TCP port scanner Program")
         .version("0.1.2")
         .author("janiokq <janiokq@gmail.com>")
         .about("This is TCP port scanner written using RUST")
         .arg(Arg::with_name("outfile")
-            .short("outf")
+            .short('o')
             .long("outfile")
             .takes_value(true)
             .help("Result Output file path"))
         .arg(Arg::with_name("ips")
-            .short("ip")
+            .short('i')
             .long("ipRange")
             .takes_value(true)
             .help("This is the IP range parameter\n\
@@ -53,7 +46,7 @@ fn main()  {
             ip-ip   Description of a range of IP
             "))
         .arg(Arg::with_name("port")
-            .short("p")
+            .short('p')
             .long("port")
             .takes_value(true)
             .help("This is the Port range parameter\n\
@@ -62,7 +55,7 @@ fn main()  {
             port-port   Description of a range of Port
             "))
         .arg(Arg::with_name("thread")
-            .short("t")
+            .short('t')
             .long("threads")
             .takes_value(true)
             .help("Use the number of worker threads。  The default value is the current number of physical cores x 2 "))
@@ -72,10 +65,10 @@ fn main()  {
         Ok(d)=>{
             Resource::FSIZE.set(d.1, d.1).unwrap();
         },
-        Err(e)=>{
+        Err(_e)=>{
         }
     }
-    ///尝试
+    // try
     let ips = matches.value_of("ips");
     let ports = matches.value_of("port");
     let mut ip_range: Vec<String> = Vec::new();
@@ -106,14 +99,13 @@ fn main()  {
             ip_range = gen_range_ip(&sip, &eip)
         }
         Some(s) => {
-            let model = false;
             match s.find(",") {
                 None => {
                     match s.find("-") {
                         None => {
                             ip_range.push(s.to_string());
                         }
-                        Some(index) => {
+                        Some(_index) => {
                             let mut start = "";
                             let mut end = "";
                             for x in s.split("-") {
@@ -127,7 +119,7 @@ fn main()  {
                         }
                     }
                 }
-                Some(index) => {
+                Some(_index) => {
                     for x in s.split(",") {
                         if !x.eq(",") {
                             ip_range.push(x.to_string());
@@ -139,9 +131,9 @@ fn main()  {
     }
     match ports {
         None => {
-            ///Default full port
+            // Default full port
             let mut start: u16 = 0;
-            let mut end: u16 = 65535;
+            let end: u16 = 65535;
             while start < end {
                 start += 1;
                 PORTS.lock().unwrap().push(start);
@@ -154,7 +146,7 @@ fn main()  {
                         None => {
                             PORTS.lock().unwrap().push(s.parse::<u16>().unwrap());
                         }
-                        Some(index) => {
+                        Some(_index) => {
                             let mut start: u16 = 0;
                             let mut end: u16 = 0;
                             for x in s.split("-") {
@@ -172,7 +164,7 @@ fn main()  {
                         }
                     }
                 }
-                Some(index) => {
+                Some(_index) => {
                     for x in s.split(",") {
                         if !x.eq(",") {
                             PORTS.lock().unwrap().push(x.parse::<u16>().unwrap());
@@ -192,13 +184,12 @@ fn main()  {
                         threads = thr;
                     }
                 },
-                Err(e)=>{
+                Err(_e)=>{
                 }
             }
         },
         None=>{}
     } ;
-
 
 
 
@@ -211,13 +202,17 @@ fn main()  {
         .block_on(async {
 
             println!("total IP addresses {}", ip_range.len());
-            scan(0,ip_range).await;
+
+            _ = scan(0,ip_range).await;
+            // sleep(Duration::from_millis(10000)).await;
 
             println!("total time consuming ：{} ms", now.elapsed().as_millis());
             println!("scan end ....");
-            let mut global_results = RESULTS.lock().await;
+
+            let global_results = RESULTS.lock().await;
             println!("{:?}", global_results);
             let outfile = matches.value_of("outfile").unwrap_or("./scan_results.txt");
+
             let mut file = File::create(outfile).unwrap();
             for item in global_results.iter() {
                 file.write(item.0.as_ref()).unwrap();
@@ -225,36 +220,32 @@ fn main()  {
                 file.write(item.1.as_ref()).unwrap();
                 file.write(b"\n").unwrap();
             }
-
+            println!("写入完成");
         });
-
-
-
 }
 
 #[async_recursion]
+#[inline]
 async fn scan(start_p:usize,ip_range: Vec<String>) -> io::Result<()> {
-    let timeout_ping = Duration::from_millis(200);
     let mut handles = Vec::new();
     let mut start_position: usize = start_p;
-    let mut end_p = ip_range.len();
     let mut has_error = false;
-
-    while start_position < end_p  {
-        let addr = ip_range[start_position].parse().unwrap();
-        match  Pinger::new(addr) {
-            Ok(p)=>{
-               let mut pinger = p;
-                pinger.timeout(timeout_ping);
-                handles.push(tokio::spawn(async move {
-                    ping_ip(addr.to_string(), pinger).await;
-                }));
-            },
-            Err(e)=>{
-                has_error = true;
-                break;
-            }
-        };
+    while start_position < ip_range.len()  {
+        let addr:String = ip_range[start_position].parse().unwrap();
+            match surge_ping::ping(addr.parse().unwrap(), &[1,]).await {
+                Ok((IcmpPacket::V4(_), _)) => {
+                    handles.push(tokio::spawn(async move {
+                      _ =  port_scanning(addr.to_string()).await;
+                    }));
+                },
+                Ok(_) => {
+                    has_error = true;
+                },
+                Err(e) => {
+                    has_error = true;
+                    println!("{:?}", e)
+                },
+            };
         start_position+=1;
     };
 
@@ -262,27 +253,29 @@ async fn scan(start_p:usize,ip_range: Vec<String>) -> io::Result<()> {
         handle.await?;
     }
     if has_error {
-        scan(start_position.clone(),ip_range.clone()).await;
+       _ = scan(start_position.clone(),ip_range.clone()).await;
     }
 
     Ok(())
 }
 
-async fn ping_ip(addr: String, pinger: Pinger) -> io::Result<()> {
-    match pinger.ping(0).await {
-        Ok(reply) => {
-            port_scanning(addr.to_string()).await;
-            Ok(())
-        }
-        Err(e) => {
-            // println!("Unable to access IP {}", addr);
-            Ok(())
-        }
-    }
-}
+// async fn ping_ip(addr: String, pinger: Pinger) -> io::Result<()> {
+//     match pinger.ping(0).await {
+//         Ok(reply) => {
+//             port_scanning(addr.to_string()).await;
 
+//             Ok(())
+//         }
+//         Err(e) => {
+//             // println!("Unable to access IP {}", addr);
+//             Ok(())
+//         }
+//     }
+// }
+
+#[inline]
 async fn port_scanning(addr: String) -> io::Result<()> {
-    let timeout = Duration::from_millis(200);
+    let timeout = Duration::from_millis(500);
     let open_port = Arc::new(Mutex::new(Vec::new()));
     let mut handles = Vec::new();
     let now = Instant::now();
@@ -307,7 +300,7 @@ async fn port_scanning(addr: String) -> io::Result<()> {
     for handle in handles {
         handle.await?;
     }
-    let mut results = open_port.lock().await;
+    let results = open_port.lock().await;
     if results.len() > 0 {
         let mut global_results = RESULTS.lock().await;
         let mut ports = "".to_string();
@@ -316,13 +309,14 @@ async fn port_scanning(addr: String) -> io::Result<()> {
         }
         global_results.insert(addr, ports);
     }
-    let mut lock = data1.lock().await;
+    let lock = data1.lock().await;
     println!("{} completes task {}：consuming {} ms", lock, addr2, now.elapsed().as_millis());
 
 
     Ok(())
 }
 
+#[inline]
 fn tcp_is_open(hostname: String, port: u16, timeout: Duration) -> bool {
     let server = format!("{}:{}", hostname, port);
     let addrs: Vec<_> = server.to_socket_addrs().expect("Unable to parse socket address").collect();
@@ -342,7 +336,7 @@ fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
     let starts_split = start.split(".");
     let mut starts: Vec<u32> = Vec::new();
     for d in starts_split {
-        let mut n: u32 = FromStr::from_str(d).unwrap();
+        let n: u32 = FromStr::from_str(d).unwrap();
         starts.push(n);
     }
 
@@ -353,7 +347,7 @@ fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
             if starts[i - 1] < 256 {
                 starts[i - 1] += 1;
                 if starts[i - 1] == 256 {
-                    let mut cleari = i - 2;
+                    let cleari = i - 2;
                     if cleari > 0 {
                         starts[cleari] += 1;
                         starts[i - 1] = 1;
@@ -365,7 +359,7 @@ fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
             i -= 1;
         }
         if !addvalue {
-            ///无法在生成 IP
+            // 无法在生成 IP
             break;
         }
         let mut ip = "".to_string();
@@ -382,15 +376,15 @@ fn gen_range_ip(start: &str, end: &str) -> Vec<String> {
 }
 
 
-fn udp_is_open(hostname: String, port: u16, timeout: Duration) -> bool {
-    let server = format!("{}:{}", hostname, port);
-    //let udp =  UdpSocket::connect(server).unwrap();
-    println!("连接成功了");
-    false
-    // if let Ok(stream) = UdpSocket::connect_timeout(&addrs[0], timeout) {
-    //     stream.shutdown(Shutdown::Both).expect("shutdown call failed");
-    //     true
-    // } else {
-    //     false
-    // }
-}
+// fn udp_is_open(hostname: String, port: u16, timeout: Duration) -> bool {
+//     let server = format!("{}:{}", hostname, port);
+//     //let udp =  UdpSocket::connect(server).unwrap();
+//     println!("连接成功了");
+//     false
+//     // if let Ok(stream) = UdpSocket::connect_timeout(&addrs[0], timeout) {
+//     //     stream.shutdown(Shutdown::Both).expect("shutdown call failed");
+//     //     true
+//     // } else {
+//     //     false
+//     // }
+// }

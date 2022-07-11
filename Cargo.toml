@@ -2,20 +2,19 @@
 name = "nfind"
 version = "0.1.2"
 authors = ["WG-zhangfeng <janiokq>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 lazy_static = "1.4.0"
-surge-ping = "0.3.0"
+surge-ping = "0.7.0"
 rand = "0.8.4"
 ipnet = "2.3.1"
-clap = "2.33.3"
+clap = "3.2.8"
 local-ip-address = "0.4.4"
-async-recursion = "0.3.2"
-rlimit = "0.6.2"
+async-recursion = "1.0.0"
+rlimit = "0.8.3"
 num_cpus = "1.13.0"
-tokio = {version = "1.11.0",features = ["full"]}
-
+tokio = {version = "1.19.2",features = ["full"]}
 
