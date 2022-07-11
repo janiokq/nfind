@@ -18,3 +18,9 @@ rlimit = "0.8.3"
 num_cpus = "1.13.0"
 tokio = {version = "1.19.2",features = ["full"]}
 
+[profile.release]
+incremental = true
+lto = true
+codegen-units = 1
+panic = "abort"
+opt-level = "s"
