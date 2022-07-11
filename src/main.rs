@@ -28,7 +28,7 @@ use rlimit::Resource;
 // #[tokio::main]
 fn main()  {
     let matches = App::new("TCP port scanner Program")
-        .version("0.1.2")
+        .version("0.1.3")
         .author("janiokq <janiokq@gmail.com>")
         .about("This is TCP port scanner written using RUST")
         .arg(Arg::with_name("outfile")
